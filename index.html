@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -190,17 +189,29 @@
             let nomeOficial = candidato.team.name;
             let pais = candidato.team.country;
 
-            // Etapa 2: busca o próximo jogo confirmado desse time, qualquer competição
-            let respFixture = await fetch('https://v3.football.api-sports.io/fixtures?team=' + timeId + '&next=1', {
-                headers: { 'x-apisports-key': chaveFootball }
-            });
+            // Etapa 2: busca fixtures num intervalo de datas (o parâmetro "next" é bloqueado
+            // no plano gratuito da API-Football, então usamos from/to e pegamos o mais próximo)
+            let hoje = new Date();
+            let limite = new Date();
+            limite.setDate(limite.getDate() + 180); // cobre folgas longas de temporada (amistosos, pré-temporada etc.)
+            let fmt = d => d.toISOString().slice(0, 10);
+
+            let respFixture = await fetch(
+                'https://v3.football.api-sports.io/fixtures?team=' + timeId +
+                '&from=' + fmt(hoje) + '&to=' + fmt(limite),
+                { headers: { 'x-apisports-key': chaveFootball } }
+            );
             let dadosFixture = await respFixture.json();
 
             if (!dadosFixture.response || dadosFixture.response.length === 0) {
-                throw new Error('Nenhum próximo jogo agendado encontrado para este time.');
+                throw new Error('Nenhum jogo agendado nos próximos 180 dias para este time.');
             }
 
-            let jogo = dadosFixture.response[0];
+            // Ordena por data e pega o primeiro (o mais próximo a partir de agora)
+            let proximos = dadosFixture.response
+                .slice()
+                .sort((a, b) => new Date(a.fixture.date) - new Date(b.fixture.date));
+            let jogo = proximos[0];
             return {
                 nomeOficial,
                 pais,
