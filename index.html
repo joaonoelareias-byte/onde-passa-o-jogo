@@ -9,27 +9,62 @@
         .container { width: 100%; max-width: 400px; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
         h1 { color: #16a34a; text-align: center; font-size: 22px; margin-bottom: 8px; }
         .subtitulo { text-align: center; font-size: 12px; color: #6b7280; margin-bottom: 20px; }
-        .box { background: #f9fafb; border: 1px solid #e5e7eb; padding: 14px; border-radius: 6px; }
+        .box { background: #f9fafb; border: 1px solid #e5e7eb; padding: 14px; border-radius: 6px; margin-bottom: 14px; }
+        .box-chave { background: #fef9c3; border-color: #fef08a; }
         label { display: block; font-size: 12px; font-weight: bold; margin-bottom: 4px; color: #374151; }
         input, select { width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 4px; margin-bottom: 10px; font-size: 14px; box-sizing: border-box; }
+        .flex { display: flex; gap: 8px; }
+        .flex input { margin-bottom: 0; }
         button { background: #16a34a; color: white; border: none; padding: 10px 12px; border-radius: 4px; font-weight: bold; cursor: pointer; width: 100%; font-size: 14px; }
         button:active { opacity: 0.85; }
+        .btn-salvar { width: auto; background: #ca8a04; padding: 8px 14px; }
         .campo-resultado { margin-top: 14px; }
         .caixa-texto { background: #f3f4f6; border: 1px solid #e5e7eb; border-radius: 4px; padding: 10px; font-size: 13px; color: #374151; line-height: 1.5; white-space: pre-wrap; word-break: break-word; min-height: 40px; }
         .btn-copiar { background: #2563eb; margin-top: 8px; }
         .btn-copiar.copiado { background: #16a34a; }
         .dica { font-size: 11px; color: #9ca3af; margin-top: 6px; }
+        .chips { display: flex; flex-wrap: wrap; gap: 6px; margin: -4px 0 10px; }
+        .chip { width: auto; background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; padding: 5px 10px; border-radius: 20px; font-size: 12px; font-weight: normal; cursor: pointer; }
+        .chip:active { opacity: 0.8; }
+        .chip.ativo { background: #16a34a; color: white; border-color: #16a34a; font-weight: bold; }
     </style>
+    <!--
+      A chave fica salva em localStorage e a chamada à API sai direto do navegador.
+      Aceitável para uso pessoal. Se este arquivo for hospedado publicamente,
+      qualquer pessoa pode abrir o DevTools e ver a chave. Para evitar isso,
+      seria necessário um backend guardando a chave no servidor.
+    -->
+    <script type="importmap">
+      {
+        "imports": {
+          "@google/genai": "https://esm.sh/@google/genai"
+        }
+      }
+    </script>
 </head>
 <body>
 
     <div class="container">
         <h1>⚽ Onde Passa o Jogo?</h1>
-        <p class="subtitulo">Monta a pergunta certa. Você cola na IA que preferir.</p>
+        <p class="subtitulo">Escolha o jogo. A IA te diz onde assistir.</p>
+
+        <div class="box box-chave">
+            <label>🔑 Sua Chave API do Gemini:</label>
+            <div class="flex">
+                <input id="keyIn" type="password" placeholder="Cole sua chave aqui...">
+                <button class="btn-salvar" onclick="salvarChave()">Salvar</button>
+            </div>
+        </div>
 
         <div class="box">
             <label>Meu time</label>
             <input id="meuTime" type="text" placeholder="Ex: Manchester United">
+            <div class="chips" id="chipsTimes">
+                <button type="button" class="chip" onclick="selecionarTime('Benfica')">Benfica</button>
+                <button type="button" class="chip" onclick="selecionarTime('Manchester United')">Manchester United</button>
+                <button type="button" class="chip" onclick="selecionarTime('Palmeiras')">Palmeiras</button>
+                <button type="button" class="chip" onclick="selecionarTime('Real Madrid')">Real Madrid</button>
+            </div>
 
             <label>Adversário</label>
             <input id="adversario" type="text" placeholder="Ex: AC Milan">
@@ -42,23 +77,46 @@
             </select>
             <input id="dataCustom" type="text" placeholder="Ex: sábado, 22 de agosto" style="display:none;">
 
-            <button onclick="montarTexto()">Montar pergunta</button>
+            <button onclick="perguntarIA()">🔍 Perguntar</button>
         </div>
 
         <div class="campo-resultado" id="campoResultado" style="display:none;">
-            <label>Pergunta pronta:</label>
+            <label>Resposta:</label>
             <div class="caixa-texto" id="textoGerado"></div>
-            <button class="btn-copiar" id="btnCopiar" onclick="copiarTexto()">📋 Copiar</button>
-            <p class="dica">Cole essa pergunta na sua IA de preferência (Gemini, ChatGPT, etc).</p>
+            <button class="btn-copiar" id="btnCopiar" onclick="copiarTexto()">📋 Copiar pergunta usada</button>
+            <p class="dica">Copia a pergunta que foi enviada, caso queira reusar em outra IA.</p>
         </div>
     </div>
 
-    <script>
-        document.getElementById('quando').addEventListener('change', function() {
-            document.getElementById('dataCustom').style.display = this.value === 'outra' ? 'block' : 'none';
-        });
+    <script type="module">
+        import { GoogleGenAI } from '@google/genai';
 
-        function montarTexto() {
+        let chave = '';
+        let ultimaPergunta = '';
+
+        window.onload = function() {
+            chave = localStorage.getItem('app_gemini_key') || '';
+            if (chave) document.getElementById('keyIn').value = chave;
+        };
+
+        window.salvarChave = function() {
+            let valor = document.getElementById('keyIn').value.trim();
+            if (valor) {
+                localStorage.setItem('app_gemini_key', valor);
+                chave = valor;
+                alert('Chave salva com sucesso!');
+            }
+        };
+
+        window.selecionarTime = function(nome) {
+            document.getElementById('meuTime').value = nome;
+            document.querySelectorAll('.chip').forEach(c => c.classList.remove('ativo'));
+            let chipClicado = Array.from(document.querySelectorAll('.chip')).find(c => c.textContent.trim() === nome);
+            if (chipClicado) chipClicado.classList.add('ativo');
+            document.getElementById('adversario').focus();
+        };
+
+        function montarPergunta() {
             let meuTime = document.getElementById('meuTime').value.trim();
             let adversario = document.getElementById('adversario').value.trim();
             let quando = document.getElementById('quando').value;
@@ -66,42 +124,74 @@
 
             if (!meuTime) {
                 alert('Preencha pelo menos o nome do seu time.');
-                return;
+                return null;
             }
 
             let quandoTexto = quando === 'hoje' ? 'hoje'
                 : quando === 'amanha' ? 'amanhã'
                 : (dataCustom || 'na data que eu informar');
 
-            let texto;
             if (adversario) {
-                texto = 'Onde vai passar o jogo de futebol ' + meuTime + ' x ' + adversario + ', ' + quandoTexto + '? Liste todos os canais oficiais de transmissão no Brasil (TV aberta, TV fechada, streaming e canais do YouTube, incluindo canais menos conhecidos).';
-            } else {
-                texto = 'Onde vai passar o jogo de futebol do ' + meuTime + ' ' + quandoTexto + '? Liste todos os canais oficiais de transmissão no Brasil (TV aberta, TV fechada, streaming e canais do YouTube, incluindo canais menos conhecidos).';
+                return 'Onde vai passar o jogo de futebol ' + meuTime + ' x ' + adversario + ', ' + quandoTexto + '? Liste todos os canais oficiais de transmissão no Brasil (TV aberta, TV fechada, streaming e canais do YouTube, incluindo canais menos conhecidos). Se não tiver certeza da transmissão, diga isso claramente em vez de arriscar uma resposta.';
             }
-
-            document.getElementById('textoGerado').textContent = texto;
-            document.getElementById('campoResultado').style.display = 'block';
-
-            let btn = document.getElementById('btnCopiar');
-            btn.textContent = '📋 Copiar';
-            btn.classList.remove('copiado');
+            return 'Onde vai passar o jogo de futebol do ' + meuTime + ' ' + quandoTexto + '? Liste todos os canais oficiais de transmissão no Brasil (TV aberta, TV fechada, streaming e canais do YouTube, incluindo canais menos conhecidos). Se não tiver certeza de qual é o jogo ou da transmissão, diga isso claramente em vez de arriscar uma resposta.';
         }
 
-        function copiarTexto() {
-            let texto = document.getElementById('textoGerado').textContent;
-            navigator.clipboard.writeText(texto).then(function() {
+        window.perguntarIA = async function() {
+            if (!chave) {
+                alert('Salve sua chave do Gemini primeiro!');
+                return;
+            }
+            let pergunta = montarPergunta();
+            if (!pergunta) return;
+            ultimaPergunta = pergunta;
+
+            let campoResultado = document.getElementById('campoResultado');
+            let textoGerado = document.getElementById('textoGerado');
+            campoResultado.style.display = 'block';
+            textoGerado.textContent = 'Buscando...';
+
+            try {
+                const ai = new GoogleGenAI({ apiKey: chave });
+                const response = await ai.models.generateContent({
+                    model: 'gemini-3.1-flash-lite',
+                    contents: pergunta,
+                    tools: [{ googleSearch: {} }]
+                });
+
+                let txt = response.text;
+                textoGerado.textContent = txt ? txt.replace(/\*\*/g, '').replace(/\*/g, '•') : 'Nenhuma informação encontrada.';
+            } catch (e) {
+                console.error(e);
+                textoGerado.textContent = 'Erro ao processar. Certifique-se de que salvou uma Chave API do Gemini válida.';
+            }
+        };
+
+        window.copiarTexto = function() {
+            if (!ultimaPergunta) return;
+            navigator.clipboard.writeText(ultimaPergunta).then(function() {
                 let btn = document.getElementById('btnCopiar');
                 btn.textContent = '✅ Copiado!';
                 btn.classList.add('copiado');
                 setTimeout(function() {
-                    btn.textContent = '📋 Copiar';
+                    btn.textContent = '📋 Copiar pergunta usada';
                     btn.classList.remove('copiado');
                 }, 2000);
             }).catch(function() {
-                alert('Não foi possível copiar automaticamente. Selecione o texto manualmente.');
+                alert('Não foi possível copiar automaticamente.');
             });
-        }
+        };
+
+        document.getElementById('meuTime').addEventListener('input', function() {
+            let valor = this.value.trim();
+            document.querySelectorAll('.chip').forEach(c => {
+                c.classList.toggle('ativo', c.textContent.trim() === valor);
+            });
+        });
+
+        document.getElementById('quando').addEventListener('change', function() {
+            document.getElementById('dataCustom').style.display = this.value === 'outra' ? 'block' : 'none';
+        });
     </script>
 </body>
 </html>
