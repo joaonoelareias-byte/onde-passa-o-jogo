@@ -19,11 +19,24 @@
         .btn-busca { background: #2563eb; color: white; border: none; padding: 8px; border-radius: 4px; font-weight: bold; cursor: pointer; width: 100%; margin-top: 8px; }
         .resultado { font-size: 13px; margin-top: 8px; color: #374151; background: #f3f4f6; padding: 8px; border-radius: 4px; line-height: 1.4; }
     </style>
-    <!-- Importa de forma segura a biblioteca oficial do Google Gemini -->
+    <!--
+      Import corrigido: o pacote certo para a API nova (com tools.googleSearch)
+      é @google/genai, e o CDN esm.run precisa do nome do pacote no path.
+      O import antigo ("@google/generative-ai": "https://esm.run") não resolvia
+      para nenhum módulo válido, então o script quebrava silenciosamente no
+      "import" logo na primeira linha.
+
+      AVISO: a chave fica salva em localStorage e a chamada à API sai direto
+      do navegador. Isso é aceitável para uso local, só seu. Se este arquivo
+      for hospedado publicamente ou compartilhado com outras pessoas, qualquer
+      uma delas pode abrir o DevTools e roubar sua chave. Para distribuir,
+      o certo é mover a chamada da API para um backend (mesmo que seja uma
+      function serverless simples) que guarda a chave no servidor.
+    -->
     <script type="importmap">
       {
         "imports": {
-          "@google/generative-ai": "https://esm.run"
+          "@google/genai": "https://esm.run/@google/genai"
         }
       }
     </script>
@@ -55,7 +68,7 @@
     </div>
 
     <script type="module">
-        import { GoogleGenAI } from '@google/generative-ai';
+        import { GoogleGenAI } from '@google/genai';
 
         let times = ['Benfica', 'Palmeiras'];
         let chave = '';
