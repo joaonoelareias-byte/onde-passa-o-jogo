@@ -127,27 +127,14 @@
             }
 
             divJogos.innerHTML = times.map((t, idx) => {
-                if (idx === 0) {
-                    return `
-                        <div class="card">
-                            <div style="display:flex; justify-content:between; font-size:11px; color:#6b7280;">
-                                <span style="background:#16a34a; color:white; padding:2px 6px; border-radius:3px; font-weight:bold;">⚡ JANELA DE 2H</span>
-                            </div>
-                            <div style="font-weight:bold; margin:8px 0;">${t} x Adversário</div>
-                            <div id="res-${idx}">
-                                <button class="btn-busca" id="btn-click-${idx}"> 🔍 Descobrir Canais</button>
-                            </div>
+                return `
+                    <div class="card">
+                        <div style="font-weight:bold; margin-bottom:8px;">${t}</div>
+                        <div id="res-${idx}">
+                            <button class="btn-busca" id="btn-click-${idx}"> 🔍 Descobrir Próximo Jogo</button>
                         </div>
-                    `;
-                } else {
-                    return `
-                        <div class="card" style="opacity:0.5; border-left-color:#9ca3af;">
-                            <span style="background:#9ca3af; color:white; padding:2px 6px; border-radius:3px; font-size:11px; font-weight:bold;">🕒 AGUARDANDO</span>
-                            <div style="font-weight:bold; margin:8px 0;">${t} x Adversário</div>
-                            <p style="font-size:11px; color:#6b7280; margin:0;">A pesquisa abre 2h antes do jogo.</p>
-                        </div>
-                    `;
-                }
+                    </div>
+                `;
             }).join('');
 
             // Adiciona o evento de clique de forma segura compatível com módulos do navegador
@@ -167,7 +154,7 @@
             let campo = document.getElementById(idElemento);
             campo.innerHTML = '<p style="font-size:12px; color:#6b7280; font-style:italic;">Buscando na internet em tempo real com o Gemini...</p>';
 
-            let prompt = "Onde assistir ao vivo o jogo do " + time + " hoje ou nas próximas horas no Brasil? Liste resumidamente apenas os canais oficiais (TV aberta, fechada, streaming ou canais do YouTube).";
+            let prompt = "Qual é o próximo jogo do " + time + " (a partir de hoje, mesmo que seja daqui a vários dias)? Informe a data e o adversário, e depois liste todos os canais oficiais onde o jogo será transmitido no Brasil (TV aberta, TV fechada, streaming e canais oficiais do YouTube). Seja objetivo.";
 
             try {
                 // Inicializa o cliente do Gemini usando o padrão oficial do Google para navegadores web
