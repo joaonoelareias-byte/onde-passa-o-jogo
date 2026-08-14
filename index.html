@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -54,12 +55,14 @@
             </div>
         </div>
 
-        <div class="box box-chave">
-            <label style="display:block; font-size:12px; font-weight:bold; margin-bottom:4px;">⚽ Sua Chave API-Football:</label>
+        <div class="box">
+            <label style="display:block; font-size:12px; font-weight:bold; margin-bottom:4px;">🔎 Onde passa esse jogo?</label>
+            <p style="font-size:11px; color:#6b7280; margin:0 0 8px;">Ex: "Benfica x Estrela da Amadora hoje" ou "Corinthians x Palmeiras amanhã"</p>
             <div class="flex">
-                <input id="keyFootballIn" type="password" placeholder="Cole sua chave aqui...">
-                <button onclick="salvarChaveFootball()" style="background:#ca8a04;">Salvar</button>
+                <input id="buscaLivreIn" type="text" placeholder="Digite os times e quando é o jogo..." onkeydown="if(event.key==='Enter') buscarLivre()">
+                <button onclick="buscarLivre()" style="background:#2563eb;">Buscar</button>
             </div>
+            <div id="res-livre" style="margin-top:8px;"></div>
         </div>
 
         <div class="box">
@@ -80,14 +83,10 @@
 
         let times = ['Benfica', 'Palmeiras'];
         let chave = '';
-        let chaveFootball = '';
 
         window.onload = function() {
             chave = localStorage.getItem('app_gemini_key') || '';
             if (chave) document.getElementById('keyIn').value = chave;
-
-            chaveFootball = localStorage.getItem('app_football_key') || '';
-            if (chaveFootball) document.getElementById('keyFootballIn').value = chaveFootball;
             
             let salvos = localStorage.getItem('app_times');
             if (salvos) times = JSON.parse(salvos);
@@ -100,16 +99,6 @@
             if (valor) {
                 localStorage.setItem('app_gemini_key', valor);
                 chave = valor;
-                alert('Chave salva com sucesso!');
-                desenharTela();
-            }
-        };
-
-        window.salvarChaveFootball = function() {
-            let valor = document.getElementById('keyFootballIn').value.trim();
-            if (valor) {
-                localStorage.setItem('app_football_key', valor);
-                chaveFootball = valor;
                 alert('Chave salva com sucesso!');
                 desenharTela();
             }
@@ -168,103 +157,14 @@
             });
         }
 
-        async function buscarProximoJogo(time) {
-            // Etapa 1: encontra o ID do time na API-Football pelo nome digitado
-            let respTime = await fetch('https://v3.football.api-sports.io/teams?search=' + encodeURIComponent(time), {
-                headers: { 'x-apisports-key': chaveFootball }
-            });
-            let dadosTime = await respTime.json();
-
-            if (!dadosTime.response || dadosTime.response.length === 0) {
-                throw new Error('Time não encontrado na base da API-Football.');
-            }
-
-            // Prioriza um time cujo nome bata de perto com o texto digitado, evitando
-            // escolher de cara uma categoria de base ou feminina que também contenha o nome
-            let candidato = dadosTime.response.find(t =>
-                t.team.name.toLowerCase() === time.toLowerCase()
-            ) || dadosTime.response[0];
-
-            let timeId = candidato.team.id;
-            let nomeOficial = candidato.team.name;
-            let pais = candidato.team.country;
-
-            // Etapa 2: busca fixtures num intervalo de datas. A API exige o parâmetro "season"
-            // quando from/to são usados com team. Como não sabemos se a liga do time segue o
-            // calendário europeu (ex: 2026/27) ou o civil (ex: Brasil, season = próprio ano),
-            // buscamos o ano atual e o seguinte em paralelo e juntamos os resultados.
-            let hoje = new Date();
-            let limite = new Date();
-            limite.setDate(limite.getDate() + 180); // cobre folgas longas de temporada
-            let fmt = d => d.toISOString().slice(0, 10);
-            let anoAtual = hoje.getFullYear();
-
-            let urlBase = 'https://v3.football.api-sports.io/fixtures?team=' + timeId +
-                '&from=' + fmt(hoje) + '&to=' + fmt(limite) + '&season=';
-
-            let [respAtual, respProximo] = await Promise.all([
-                fetch(urlBase + anoAtual, { headers: { 'x-apisports-key': chaveFootball } }),
-                fetch(urlBase + (anoAtual + 1), { headers: { 'x-apisports-key': chaveFootball } })
-            ]);
-            let [dadosAtual, dadosProximo] = await Promise.all([respAtual.json(), respProximo.json()]);
-
-            let todosJogos = [
-                ...(dadosAtual.response || []),
-                ...(dadosProximo.response || [])
-            ];
-
-            if (todosJogos.length === 0) {
-                let diag = 'Diagnóstico — season ' + anoAtual + ': results=' + (dadosAtual.results ?? '?') +
-                    ', errors=' + JSON.stringify(dadosAtual.errors || {}) +
-                    ' | season ' + (anoAtual + 1) + ': results=' + (dadosProximo.results ?? '?') +
-                    ', errors=' + JSON.stringify(dadosProximo.errors || {});
-                throw new Error('Nenhum jogo agendado nos próximos 180 dias para este time. ' + diag);
-            }
-
-            // Ordena por data e pega o primeiro (o mais próximo a partir de agora)
-            let proximos = todosJogos
-                .slice()
-                .sort((a, b) => new Date(a.fixture.date) - new Date(b.fixture.date));
-            let jogo = proximos[0];
-            return {
-                nomeOficial,
-                pais,
-                dataISO: jogo.fixture.date,
-                adversario: jogo.teams.home.id === timeId ? jogo.teams.away.name : jogo.teams.home.name,
-                mandante: jogo.teams.home.name,
-                visitante: jogo.teams.away.name,
-                competicao: jogo.league.name,
-                local: jogo.fixture.venue?.name || ''
-            };
-        }
-
-        async function buscarIA(time, idElemento) {
+        async function consultarGemini(prompt, campo, mensagemCarregando) {
             if (!chave) {
                 alert('Salve a chave do Gemini primeiro!');
                 return;
             }
-            if (!chaveFootball) {
-                alert('Salve a chave da API-Football primeiro!');
-                return;
-            }
-            let campo = document.getElementById(idElemento);
-            campo.innerHTML = '<p style="font-size:12px; color:#6b7280; font-style:italic;">Buscando o próximo jogo confirmado...</p>';
+            campo.innerHTML = '<p style="font-size:12px; color:#6b7280; font-style:italic;">' + mensagemCarregando + '</p>';
 
             try {
-                // Etapa 1: dados confiáveis do jogo (data, adversário, competição) via API-Football
-                let jogo = await buscarProximoJogo(time);
-                let dataFormatada = new Date(jogo.dataISO).toLocaleDateString('pt-BR', {
-                    day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
-                });
-
-                campo.innerHTML = '<p style="font-size:12px; color:#6b7280; font-style:italic;">Jogo encontrado! Buscando canais de transmissão...</p>';
-
-                // Etapa 2: só os canais de transmissão, com a data já confirmada como contexto
-                let prompt = "O jogo é: " + jogo.mandante + " x " + jogo.visitante +
-                    ", pela competição " + jogo.competicao + ", em " + dataFormatada + " (horário de Brasília)" +
-                    (jogo.local ? ", no local " + jogo.local : "") +
-                    ". Liste todos os canais oficiais onde ESSA partida específica será transmitida no Brasil (TV aberta, TV fechada, streaming e canais oficiais do YouTube). Se não encontrar confirmação de transmissão no Brasil para essa partida, diga isso claramente. Seja objetivo.";
-
                 const ai = new GoogleGenAI({ apiKey: chave });
                 const response = await ai.models.generateContent({
                     model: 'gemini-3.1-flash-lite',
@@ -272,24 +172,34 @@
                     tools: [{ googleSearch: {} }]
                 });
 
-                let txtCanais = response.text ? response.text.replace(/\*\*/g, '').replace(/\*/g, '•') : 'Nenhuma informação de transmissão encontrada.';
-
-                campo.innerHTML = `
-                    <div class="resultado">
-                        <b>${jogo.nomeOficial}${jogo.pais ? ' (' + jogo.pais + ')' : ''}</b><br>
-                        Próximo jogo: ${jogo.mandante} x ${jogo.visitante}<br>
-                        Competição: ${jogo.competicao}<br>
-                        Data: ${dataFormatada}<br>
-                        <br>
-                        <b>Onde assistir:</b><br>
-                        ${txtCanais.replace(/\n/g, '<br>')}
-                    </div>
-                `;
+                let txt = response.text;
+                if (txt) {
+                    txt = txt.replace(/\*\*/g, '').replace(/\*/g, '•');
+                    campo.innerHTML = `<div class="resultado">${txt.replace(/\n/g, '<br>')}</div>`;
+                } else {
+                    campo.innerHTML = '<div class="resultado">Nenhuma informação clara encontrada no momento.</div>';
+                }
             } catch (e) {
                 console.error(e);
-                campo.innerHTML = '<p style="color:red; font-size:12px;">Erro: ' + e.message + '</p>';
+                campo.innerHTML = '<p style="color:red; font-size:12px; white-space:pre-wrap; word-break:break-word;">Erro ao processar. Certifique-se de que salvou uma Chave API do Gemini válida.</p>';
             }
         }
+
+        async function buscarIA(time, idElemento) {
+            let campo = document.getElementById(idElemento);
+            let prompt = "Considere APENAS o time de futebol masculino profissional principal (equipe adulta, categoria principal do clube — NÃO sub-20, sub-21, time B, futsal, futebol feminino ou outro esporte) chamado \"" + time + "\". Se houver ambiguidade sobre qual clube ou modalidade se trata, escolha a interpretação mais famosa e mais provável, e informe claramente no início da resposta qual time e país você identificou. Depois responda: qual é o próximo jogo confirmado desse time a partir de hoje (hoje mesmo, se houver), incluindo amistosos e qualquer tipo de competição? Informe a data, o adversário e a competição. Depois liste todos os canais oficiais onde essa partida será transmitida no Brasil (TV aberta, TV fechada, streaming e canais oficiais do YouTube, incluindo canais menos conhecidos). Se não encontrar confirmação de transmissão, diga isso claramente. Seja objetivo.";
+            await consultarGemini(prompt, campo, 'Buscando na internet em tempo real com o Gemini...');
+        }
+
+        window.buscarLivre = async function() {
+            let input = document.getElementById('buscaLivreIn');
+            let texto = input.value.trim();
+            if (!texto) return;
+
+            let campo = document.getElementById('res-livre');
+            let prompt = "O usuário quer saber onde assistir a este jogo de futebol: \"" + texto + "\". Identifique a partida correta com base na descrição (times e/ou data mencionados). Confirme brevemente qual partida você identificou (times, competição, data). Depois liste TODAS as possibilidades de onde assistir no Brasil: TV aberta, TV fechada, streaming e canais oficiais do YouTube — incluindo canais menos conhecidos ou de nicho que também transmitam oficialmente. Se não encontrar confirmação de transmissão, diga isso claramente. Seja objetivo.";
+            await consultarGemini(prompt, campo, 'Buscando onde esse jogo passa...');
+        };
     </script>
 </body>
 </html>
