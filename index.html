@@ -187,13 +187,9 @@
         async function buscarIA(time, idElemento) {
             let campo = document.getElementById(idElemento);
             let hoje = new Date();
-            let amanha = new Date();
-            amanha.setDate(amanha.getDate() + 1);
-            let fmtLongo = d => d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
-            let hojeFmt = fmtLongo(hoje);
-            let amanhaFmt = fmtLongo(amanha);
-            let prompt = "Hoje é " + hojeFmt + ". Considere APENAS o time de futebol masculino profissional principal (equipe adulta, categoria principal do clube — NÃO sub-20, sub-21, time B, futsal, futebol feminino ou outro esporte) chamado \"" + time + "\". Se houver ambiguidade sobre qual clube ou modalidade se trata, escolha a interpretação mais famosa e mais provável, e informe claramente no início da resposta qual time e país você identificou. Depois responda: esse time tem jogo HOJE (" + hojeFmt + ") ou AMANHÃ (" + amanhaFmt + ")? Considere qualquer competição, incluindo amistosos. Se não houver jogo em nenhuma dessas duas datas, diga isso claramente e não invente ou sugira jogos de outras datas. Se houver jogo, informe a data exata, o adversário e a competição, e depois liste todos os canais oficiais onde a partida será transmitida no Brasil (TV aberta, TV fechada, streaming e canais oficiais do YouTube, incluindo canais menos conhecidos). Se não encontrar confirmação de transmissão, diga isso claramente. Seja objetivo.";
-            await consultarGemini(prompt, campo, 'Verificando se há jogo hoje ou amanhã...');
+            let hojeFmt = hoje.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
+            let prompt = "Hoje é " + hojeFmt + ". Considere APENAS o time de futebol masculino profissional principal (equipe adulta, categoria principal do clube — NÃO sub-20, sub-21, time B, futsal, futebol feminino ou outro esporte) chamado \"" + time + "\". Onde vai passar o jogo do " + time + " hoje? Se hoje não houver jogo, onde vai passar o jogo de amanhã? Faça uma busca direta e específica pelo jogo de hoje desse time (como alguém buscaria \"onde passa o jogo do " + time + " hoje\"), não uma varredura genérica de calendário. Informe o adversário e a competição, e liste todos os canais oficiais de transmissão no Brasil (TV aberta, TV fechada, streaming e canais oficiais do YouTube, incluindo canais menos conhecidos). Só diga que não há jogo se a busca específica por hoje E amanhã genuinamente não encontrar nada. Seja objetivo.";
+            await consultarGemini(prompt, campo, 'Buscando o jogo de hoje...');
         }
 
         window.buscarLivre = async function() {
