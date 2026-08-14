@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Onde Passa o Jogo? - Definitivo</title>
+    <style>
+        body { font-family: sans-serif; background-color: #f3f4f6; padding: 20px; display: flex; justify-content: center; }
+        .container { width: 100%; max-width: 400px; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        h1 { color: #16a34a; text-align: center; font-size: 22px; margin-bottom: 20px; }
+        .box { background: #f9fafb; border: 1px solid #e5e7eb; padding: 12px; margin-bottom: 15px; border-radius: 6px; }
+        .box-chave { background: #fef9c3; border-color: #fef08a; }
+        .flex { display: flex; gap: 8px; }
+        input { flex: 1; padding: 8px; border: 1px solid #d1d5db; border-radius: 4px; }
+        button { background: #16a34a; color: white; border: none; padding: 8px 12px; border-radius: 4px; font-weight: bold; cursor: pointer; }
+        .tag { background: #dcfce7; color: #166534; padding: 4px 10px; border-radius: 20px; display: inline-block; font-size: 13px; margin: 5px 5px 0 0; }
+        .btn-remover { color: red; background: none; border: none; font-weight: bold; cursor: pointer; margin-left: 5px; }
+        .card { border: 1px solid #e5e7eb; border-left: 4px solid #16a34a; padding: 12px; border-radius: 6px; background: white; margin-top: 10px; }
+        .btn-busca { background: #2563eb; width: 100%; padding: 8px; margin-top: 8px; }
+        .resultado { font-size: 13px; margin-top: 8px; color: #374151; background: #f3f4f6; padding: 8px; border-radius: 4px; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>⚽ Onde Passa o Jogo?</h1>
+
+        <div class="box box-chave">
+            <label style="display:block; font-size:12px; font-weight:bold; margin-bottom:4px;">🔑 Sua Chave API do Gemini:</label>
+            <div class="flex">
+                <input id="keyIn" type="password" placeholder="Cole sua chave aqui...">
+                <button onclick="salvarChave()" style="background:#ca8a04;">Salvar</button>
+            </div>
+        </div>
+
+        <div class="box">
+            <label style="display:block; font-size:12px; font-weight:bold; margin-bottom:4px;">Meus Times Favoritos:</label>
+            <div class="flex">
+                <input id="teamIn" type="text" placeholder="Ex: Flamengo, Palmeiras">
+                <button onclick="adicionarTime()">+</button>
+            </div>
+            <div id="listaFavs" style="margin-top:10px;"></div>
+        </div>
+
+        <h3 style="font-size:14px; color:#4b5563; margin-top:20px;">PARTIDAS PROGRAMADAS</h3>
+        <div id="listaJogos"></div>
+    </div>
+
+    <script>
+        let times = ['Benfica'];
+        let chave = '';
+
+        window.onload = function() {
+            chave = localStorage.getItem('app_gemini_key') || '';
+            if (chave) document.getElementById('keyIn').value = chave;
+            
+            let salvos = localStorage.getItem('app_times');
+            if (salvos) times = JSON.parse(salvos);
+            
+            desenharTela();
+        };
+
+        function salvarChave() {
+            let valor = document.getElementById('keyIn').value.trim();
+            if (valor) {
+                localStorage.setItem('app_gemini_key', valor);
+                chave = valor;
+                alert('Chave salva com sucesso!');
+                desenharTela();
+            }
+        }
+
+        function adicionarTime() {
+            let input = document.getElementById('teamIn');
+            let nome = input.value.trim();
+            if (nome && !times.includes(nome)) {
+                times.push(nome);
+                localStorage.setItem('app_times', JSON.stringify(times));
+                input.value = '';
+                desenharTela();
+            }
+        }
+
+        function removerTime(nome) {
+            times = times.filter(t => t !== nome);
+            localStorage.setItem('app_times', JSON.stringify(times));
+            desenharTela();
+        }
+
+        function desenharTela() {
+            // Desenha os favoritos
+            let divFavs = document.getElementById('listaFavs');
+            if (times.length === 0) {
+                divFavs.innerHTML = '<span style="color:#9ca3af; font-size:12px;">Nenhum time.</span>';
+            } else {
+                divFavs.innerHTML = times.map(t => `
+                    <span class="tag">${t}<button class="btn-remover" onclick="removerTime('${t}')">×</button></span>
+                `).join('');
+            }
+
+            // Desenha as partidas
+            let divJogos = document.getElementById('listaJogos');
+            if (times.length === 0) {
+                divJogos.innerHTML = '<p style="color:#9ca3af; font-size:13px; text-align:center;">Adicione times para ver a agenda.</p>';
+                return;
+            }
+
+            divJogos.innerHTML = times.map((t, idx) => {
+                if (idx === 0) {
+                    return `
+                        <div class="card">
+                            <div style="display:flex; justify-content:between; font-size:11px; color:#6b7280;">
+                                <span style="background:#16a34a; color:white; padding:2px 6px; border-radius:3px; font-weight:bold;">⚡ JANELA DE 2H</span>
+                            </div>
+                            <div style="font-weight:bold; margin:8px 0;">${t} x Adversário</div>
+                            <div id="res-${idx}">
+                                <button class="btn-busca" onclick="buscarIA('${t}', 'res-${idx}')"> Descobrir Canais</button>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    return `
+                        <div class="card" style="opacity:0.5; border-left-color:#9ca3af;">
+                            <span style="background:#9ca3af; color:white; padding:2px 6px; border-radius:3px; font-size:11px; font-weight:bold;">🕒 AGUARDANDO</span>
+                            <div style="font-weight:bold; margin:8px 0;">${t} x Adversário</div>
+                            <p style="font-size:11px; color:#6b7280; margin:0;">A pesquisa abre 2h antes do jogo.</p>
+                        </div>
+                    `;
+                }
+            }).join('');
+        }
+
+        async function buscarIA(time, idElemento) {
+            if (!chave) {
+                alert('Salve sua chave primeiro!');
+                return;
+            }
+            let campo = document.getElementById(idElemento);
+            campo.innerHTML = '<p style="font-size:12px; color:#6b7280; font-style:italic;">Buscando canais na internet com o Gemini...</p>';
+
+            let prompt = "Onde assistir ao vivo o jogo do " + time + " hoje no Brasil? Liste apenas canais de TV, streaming ou YouTube. Seja muito curto e direto.";
+
+            try {
+                let r = await fetch("https://googleapis.com" + chave, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: prompt }] }],
+                        tools: [{ googleSearch: {} }]
+                    })
+                });
+                let d = await r.json();
+                let txt = d.candidates[0].content.parts[0].text;
+                campo.innerHTML = `<div class="resultado"><b>Canais encontrados:</b><br>${txt.replace(/\n/g, '<br>')}</div>`;
+            } catch (e) {
+                campo.innerHTML = '<p style="color:red; font-size:12px;">Erro ao buscar. Verifique a chave ou sua conexão.</p>';
+            }
+        }
+    </script>
+</body>
+</html>
