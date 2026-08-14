@@ -3,205 +3,105 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Onde Passa o Jogo? - Definitivo</title>
+    <title>Onde Passa o Jogo?</title>
     <style>
         body { font-family: sans-serif; background-color: #f3f4f6; padding: 20px; display: flex; justify-content: center; }
         .container { width: 100%; max-width: 400px; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        h1 { color: #16a34a; text-align: center; font-size: 22px; margin-bottom: 20px; }
-        .box { background: #f9fafb; border: 1px solid #e5e7eb; padding: 12px; margin-bottom: 15px; border-radius: 6px; }
-        .box-chave { background: #fef9c3; border-color: #fef08a; }
-        .flex { display: flex; gap: 8px; }
-        input { flex: 1; padding: 8px; border: 1px solid #d1d5db; border-radius: 4px; }
-        button { background: #16a34a; color: white; border: none; padding: 8px 12px; border-radius: 4px; font-weight: bold; cursor: pointer; }
-        .tag { background: #dcfce7; color: #166534; padding: 4px 10px; border-radius: 20px; display: inline-block; font-size: 13px; margin: 5px 5px 0 0; }
-        .btn-remover { color: red; background: none; border: none; font-weight: bold; cursor: pointer; margin-left: 5px; }
-        .card { border: 1px solid #e5e7eb; border-left: 4px solid #16a34a; padding: 12px; border-radius: 6px; background: white; margin-top: 10px; }
-        .btn-busca { background: #2563eb; color: white; border: none; padding: 8px; border-radius: 4px; font-weight: bold; cursor: pointer; width: 100%; margin-top: 8px; }
-        .resultado { font-size: 13px; margin-top: 8px; color: #374151; background: #f3f4f6; padding: 8px; border-radius: 4px; line-height: 1.4; }
+        h1 { color: #16a34a; text-align: center; font-size: 22px; margin-bottom: 8px; }
+        .subtitulo { text-align: center; font-size: 12px; color: #6b7280; margin-bottom: 20px; }
+        .box { background: #f9fafb; border: 1px solid #e5e7eb; padding: 14px; border-radius: 6px; }
+        label { display: block; font-size: 12px; font-weight: bold; margin-bottom: 4px; color: #374151; }
+        input, select { width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 4px; margin-bottom: 10px; font-size: 14px; box-sizing: border-box; }
+        button { background: #16a34a; color: white; border: none; padding: 10px 12px; border-radius: 4px; font-weight: bold; cursor: pointer; width: 100%; font-size: 14px; }
+        button:active { opacity: 0.85; }
+        .campo-resultado { margin-top: 14px; }
+        .caixa-texto { background: #f3f4f6; border: 1px solid #e5e7eb; border-radius: 4px; padding: 10px; font-size: 13px; color: #374151; line-height: 1.5; white-space: pre-wrap; word-break: break-word; min-height: 40px; }
+        .btn-copiar { background: #2563eb; margin-top: 8px; }
+        .btn-copiar.copiado { background: #16a34a; }
+        .dica { font-size: 11px; color: #9ca3af; margin-top: 6px; }
     </style>
-    <!--
-      Import corrigido: o pacote certo para a API nova (com tools.googleSearch)
-      é @google/genai, e o CDN esm.run precisa do nome do pacote no path.
-      O import antigo ("@google/generative-ai": "https://esm.run") não resolvia
-      para nenhum módulo válido, então o script quebrava silenciosamente no
-      "import" logo na primeira linha.
-
-      AVISO: a chave fica salva em localStorage e a chamada à API sai direto
-      do navegador. Isso é aceitável para uso local, só seu. Se este arquivo
-      for hospedado publicamente ou compartilhado com outras pessoas, qualquer
-      uma delas pode abrir o DevTools e roubar sua chave. Para distribuir,
-      o certo é mover a chamada da API para um backend (mesmo que seja uma
-      function serverless simples) que guarda a chave no servidor.
-    -->
-    <script type="importmap">
-      {
-        "imports": {
-          "@google/genai": "https://esm.sh/@google/genai"
-        }
-      }
-    </script>
 </head>
 <body>
 
     <div class="container">
         <h1>⚽ Onde Passa o Jogo?</h1>
-
-        <div class="box box-chave">
-            <label style="display:block; font-size:12px; font-weight:bold; margin-bottom:4px;">🔑 Sua Chave API do Gemini:</label>
-            <div class="flex">
-                <input id="keyIn" type="password" placeholder="Cole sua chave aqui...">
-                <button onclick="salvarChave()" style="background:#ca8a04;">Salvar</button>
-            </div>
-        </div>
+        <p class="subtitulo">Monta a pergunta certa. Você cola na IA que preferir.</p>
 
         <div class="box">
-            <label style="display:block; font-size:12px; font-weight:bold; margin-bottom:4px;">🔎 Onde passa esse jogo?</label>
-            <p style="font-size:11px; color:#6b7280; margin:0 0 8px;">Ex: "Benfica x Estrela da Amadora hoje" ou "Corinthians x Palmeiras amanhã"</p>
-            <div class="flex">
-                <input id="buscaLivreIn" type="text" placeholder="Digite os times e quando é o jogo..." onkeydown="if(event.key==='Enter') buscarLivre()">
-                <button onclick="buscarLivre()" style="background:#2563eb;">Buscar</button>
-            </div>
-            <div id="res-livre" style="margin-top:8px;"></div>
+            <label>Meu time</label>
+            <input id="meuTime" type="text" placeholder="Ex: Manchester United">
+
+            <label>Adversário</label>
+            <input id="adversario" type="text" placeholder="Ex: AC Milan">
+
+            <label>Quando</label>
+            <select id="quando">
+                <option value="hoje">Hoje</option>
+                <option value="amanha">Amanhã</option>
+                <option value="outra">Outra data</option>
+            </select>
+            <input id="dataCustom" type="text" placeholder="Ex: sábado, 22 de agosto" style="display:none;">
+
+            <button onclick="montarTexto()">Montar pergunta</button>
         </div>
 
-        <div class="box">
-            <label style="display:block; font-size:12px; font-weight:bold; margin-bottom:4px;">Meus Times Favoritos:</label>
-            <div class="flex">
-                <input id="teamIn" type="text" placeholder="Ex: Flamengo, Palmeiras">
-                <button onclick="adicionarTime()">+</button>
-            </div>
-            <div id="listaFavs" style="margin-top:10px;"></div>
+        <div class="campo-resultado" id="campoResultado" style="display:none;">
+            <label>Pergunta pronta:</label>
+            <div class="caixa-texto" id="textoGerado"></div>
+            <button class="btn-copiar" id="btnCopiar" onclick="copiarTexto()">📋 Copiar</button>
+            <p class="dica">Cole essa pergunta na sua IA de preferência (Gemini, ChatGPT, etc).</p>
         </div>
-
-        <h3 style="font-size:14px; color:#4b5563; margin-top:20px;">PARTIDAS PROGRAMADAS</h3>
-        <div id="listaJogos"></div>
     </div>
 
-    <script type="module">
-        import { GoogleGenAI } from '@google/genai';
+    <script>
+        document.getElementById('quando').addEventListener('change', function() {
+            document.getElementById('dataCustom').style.display = this.value === 'outra' ? 'block' : 'none';
+        });
 
-        let times = ['Benfica', 'Palmeiras'];
-        let chave = '';
+        function montarTexto() {
+            let meuTime = document.getElementById('meuTime').value.trim();
+            let adversario = document.getElementById('adversario').value.trim();
+            let quando = document.getElementById('quando').value;
+            let dataCustom = document.getElementById('dataCustom').value.trim();
 
-        window.onload = function() {
-            chave = localStorage.getItem('app_gemini_key') || '';
-            if (chave) document.getElementById('keyIn').value = chave;
-            
-            let salvos = localStorage.getItem('app_times');
-            if (salvos) times = JSON.parse(salvos);
-            
-            desenharTela();
-        };
-
-        window.salvarChave = function() {
-            let valor = document.getElementById('keyIn').value.trim();
-            if (valor) {
-                localStorage.setItem('app_gemini_key', valor);
-                chave = valor;
-                alert('Chave salva com sucesso!');
-                desenharTela();
-            }
-        };
-
-        window.adicionarTime = function() {
-            let input = document.getElementById('teamIn');
-            let nome = input.value.trim();
-            if (nome && !times.includes(nome)) {
-                times.push(nome);
-                localStorage.setItem('app_times', JSON.stringify(times));
-                input.value = '';
-                desenharTela();
-            }
-        };
-
-        window.removerTime = function(nome) {
-            times = times.filter(t => t !== nome);
-            localStorage.setItem('app_times', JSON.stringify(times));
-            desenharTela();
-        };
-
-        function desenharTela() {
-            let divFavs = document.getElementById('listaFavs');
-            if (times.length === 0) {
-                divFavs.innerHTML = '<span style="color:#9ca3af; font-size:12px;">Nenhum time.</span>';
-            } else {
-                divFavs.innerHTML = times.map(t => `
-                    <span class="tag">${t}<button class="btn-remover" onclick="removerTime('${t}')">×</button></span>
-                `).join('');
-            }
-
-            let divJogos = document.getElementById('listaJogos');
-            if (times.length === 0) {
-                divJogos.innerHTML = '<p style="color:#9ca3af; font-size:13px; text-align:center;">Adicione times para ver a agenda.</p>';
+            if (!meuTime) {
+                alert('Preencha pelo menos o nome do seu time.');
                 return;
             }
 
-            divJogos.innerHTML = times.map((t, idx) => {
-                return `
-                    <div class="card">
-                        <div style="font-weight:bold; margin-bottom:8px;">${t}</div>
-                        <div id="res-${idx}">
-                            <button class="btn-busca" id="btn-click-${idx}"> 🔍 Jogo Hoje/Amanhã?</button>
-                        </div>
-                    </div>
-                `;
-            }).join('');
+            let quandoTexto = quando === 'hoje' ? 'hoje'
+                : quando === 'amanha' ? 'amanhã'
+                : (dataCustom || 'na data que eu informar');
 
-            // Adiciona o evento de clique de forma segura compatível com módulos do navegador
-            times.forEach((t, idx) => {
-                let btn = document.getElementById(`btn-click-${idx}`);
-                if (btn) {
-                    btn.onclick = () => buscarIA(t, `res-${idx}`);
-                }
+            let texto;
+            if (adversario) {
+                texto = 'Onde vai passar o jogo de futebol ' + meuTime + ' x ' + adversario + ', ' + quandoTexto + '? Liste todos os canais oficiais de transmissão no Brasil (TV aberta, TV fechada, streaming e canais do YouTube, incluindo canais menos conhecidos).';
+            } else {
+                texto = 'Onde vai passar o jogo de futebol do ' + meuTime + ' ' + quandoTexto + '? Liste todos os canais oficiais de transmissão no Brasil (TV aberta, TV fechada, streaming e canais do YouTube, incluindo canais menos conhecidos).';
+            }
+
+            document.getElementById('textoGerado').textContent = texto;
+            document.getElementById('campoResultado').style.display = 'block';
+
+            let btn = document.getElementById('btnCopiar');
+            btn.textContent = '📋 Copiar';
+            btn.classList.remove('copiado');
+        }
+
+        function copiarTexto() {
+            let texto = document.getElementById('textoGerado').textContent;
+            navigator.clipboard.writeText(texto).then(function() {
+                let btn = document.getElementById('btnCopiar');
+                btn.textContent = '✅ Copiado!';
+                btn.classList.add('copiado');
+                setTimeout(function() {
+                    btn.textContent = '📋 Copiar';
+                    btn.classList.remove('copiado');
+                }, 2000);
+            }).catch(function() {
+                alert('Não foi possível copiar automaticamente. Selecione o texto manualmente.');
             });
         }
-
-        async function consultarGemini(prompt, campo, mensagemCarregando) {
-            if (!chave) {
-                alert('Salve a chave do Gemini primeiro!');
-                return;
-            }
-            campo.innerHTML = '<p style="font-size:12px; color:#6b7280; font-style:italic;">' + mensagemCarregando + '</p>';
-
-            try {
-                const ai = new GoogleGenAI({ apiKey: chave });
-                const response = await ai.models.generateContent({
-                    model: 'gemini-3.1-flash-lite',
-                    contents: prompt,
-                    tools: [{ googleSearch: {} }]
-                });
-
-                let txt = response.text;
-                if (txt) {
-                    txt = txt.replace(/\*\*/g, '').replace(/\*/g, '•');
-                    campo.innerHTML = `<div class="resultado">${txt.replace(/\n/g, '<br>')}</div>`;
-                } else {
-                    campo.innerHTML = '<div class="resultado">Nenhuma informação clara encontrada no momento.</div>';
-                }
-            } catch (e) {
-                console.error(e);
-                campo.innerHTML = '<p style="color:red; font-size:12px; white-space:pre-wrap; word-break:break-word;">Erro ao processar. Certifique-se de que salvou uma Chave API do Gemini válida.</p>';
-            }
-        }
-
-        async function buscarIA(time, idElemento) {
-            let campo = document.getElementById(idElemento);
-            let hoje = new Date();
-            let hojeFmt = hoje.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
-            let prompt = "Hoje é " + hojeFmt + ". Considere APENAS o time de futebol masculino profissional principal (equipe adulta, categoria principal do clube — NÃO sub-20, sub-21, time B, futsal, futebol feminino ou outro esporte) chamado \"" + time + "\". Onde vai passar o jogo do " + time + " hoje? Se hoje não houver jogo, onde vai passar o jogo de amanhã? Faça uma busca direta e específica pelo jogo de hoje desse time (como alguém buscaria \"onde passa o jogo do " + time + " hoje\"), não uma varredura genérica de calendário. Informe o adversário e a competição, e liste todos os canais oficiais de transmissão no Brasil (TV aberta, TV fechada, streaming e canais oficiais do YouTube, incluindo canais menos conhecidos). Só diga que não há jogo se a busca específica por hoje E amanhã genuinamente não encontrar nada. Seja objetivo.";
-            await consultarGemini(prompt, campo, 'Buscando o jogo de hoje...');
-        }
-
-        window.buscarLivre = async function() {
-            let input = document.getElementById('buscaLivreIn');
-            let texto = input.value.trim();
-            if (!texto) return;
-
-            let campo = document.getElementById('res-livre');
-            let hojeFmt = new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
-            let prompt = "A data de hoje é " + hojeFmt + ". O usuário quer saber onde assistir a este jogo de futebol: \"" + texto + "\". Identifique a partida correta com base na descrição (times e/ou data mencionados) — se a descrição não especificar o ano, assuma que se trata de uma partida atual ou futura, NUNCA de anos anteriores. Confirme brevemente qual partida você identificou (times, competição, data completa com ano). Depois liste TODAS as possibilidades de onde assistir no Brasil: TV aberta, TV fechada, streaming e canais oficiais do YouTube — incluindo canais menos conhecidos ou de nicho que também transmitam oficialmente. Se não encontrar confirmação de transmissão, diga isso claramente. Seja objetivo.";
-            await consultarGemini(prompt, campo, 'Buscando onde esse jogo passa...');
-        };
     </script>
 </body>
 </html>
