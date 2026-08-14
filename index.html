@@ -16,9 +16,17 @@
         .tag { background: #dcfce7; color: #166534; padding: 4px 10px; border-radius: 20px; display: inline-block; font-size: 13px; margin: 5px 5px 0 0; }
         .btn-remover { color: red; background: none; border: none; font-weight: bold; cursor: pointer; margin-left: 5px; }
         .card { border: 1px solid #e5e7eb; border-left: 4px solid #16a34a; padding: 12px; border-radius: 6px; background: white; margin-top: 10px; }
-        .btn-busca { background: #2563eb; width: 100%; padding: 8px; margin-top: 8px; }
-        .resultado { font-size: 13px; margin-top: 8px; color: #374151; background: #f3f4f6; padding: 8px; border-radius: 4px; }
+        .btn-busca { background: #2563eb; color: white; border: none; padding: 8px; border-radius: 4px; font-weight: bold; cursor: pointer; width: 100%; margin-top: 8px; }
+        .resultado { font-size: 13px; margin-top: 8px; color: #374151; background: #f3f4f6; padding: 8px; border-radius: 4px; line-height: 1.4; }
     </style>
+    <!-- Importa de forma segura a biblioteca oficial do Google Gemini -->
+    <script type="importmap">
+      {
+        "imports": {
+          "@google/generative-ai": "https://esm.run"
+        }
+      }
+    </script>
 </head>
 <body>
 
@@ -46,8 +54,10 @@
         <div id="listaJogos"></div>
     </div>
 
-    <script>
-        let times = ['Benfica'];
+    <script type="module">
+        import { GoogleGenAI } from '@google/generative-ai';
+
+        let times = ['Benfica', 'Palmeiras'];
         let chave = '';
 
         window.onload = function() {
@@ -60,7 +70,7 @@
             desenharTela();
         };
 
-        function salvarChave() {
+        window.salvarChave = function() {
             let valor = document.getElementById('keyIn').value.trim();
             if (valor) {
                 localStorage.setItem('app_gemini_key', valor);
@@ -68,9 +78,9 @@
                 alert('Chave salva com sucesso!');
                 desenharTela();
             }
-        }
+        };
 
-        function adicionarTime() {
+        window.adicionarTime = function() {
             let input = document.getElementById('teamIn');
             let nome = input.value.trim();
             if (nome && !times.includes(nome)) {
@@ -79,16 +89,15 @@
                 input.value = '';
                 desenharTela();
             }
-        }
+        };
 
-        function removerTime(nome) {
+        window.removerTime = function(nome) {
             times = times.filter(t => t !== nome);
             localStorage.setItem('app_times', JSON.stringify(times));
             desenharTela();
-        }
+        };
 
         function desenharTela() {
-            // Desenha os favoritos
             let divFavs = document.getElementById('listaFavs');
             if (times.length === 0) {
                 divFavs.innerHTML = '<span style="color:#9ca3af; font-size:12px;">Nenhum time.</span>';
@@ -98,7 +107,6 @@
                 `).join('');
             }
 
-            // Desenha as partidas
             let divJogos = document.getElementById('listaJogos');
             if (times.length === 0) {
                 divJogos.innerHTML = '<p style="color:#9ca3af; font-size:13px; text-align:center;">Adicione times para ver a agenda.</p>';
@@ -114,7 +122,7 @@
                             </div>
                             <div style="font-weight:bold; margin:8px 0;">${t} x Adversário</div>
                             <div id="res-${idx}">
-                                <button class="btn-busca" onclick="buscarIA('${t}', 'res-${idx}')"> Descobrir Canais</button>
+                                <button class="btn-busca" id="btn-click-${idx}"> 🔍 Descobrir Canais</button>
                             </div>
                         </div>
                     `;
@@ -128,6 +136,14 @@
                     `;
                 }
             }).join('');
+
+            // Adiciona o evento de clique de forma segura compatível com módulos do navegador
+            times.forEach((t, idx) => {
+                let btn = document.getElementById(`btn-click-${idx}`);
+                if (btn) {
+                    btn.onclick = () => buscarIA(t, `res-${idx}`);
+                }
+            });
         }
 
         async function buscarIA(time, idElemento) {
@@ -136,24 +152,30 @@
                 return;
             }
             let campo = document.getElementById(idElemento);
-            campo.innerHTML = '<p style="font-size:12px; color:#6b7280; font-style:italic;">Buscando canais na internet com o Gemini...</p>';
+            campo.innerHTML = '<p style="font-size:12px; color:#6b7280; font-style:italic;">Buscando na internet em tempo real com o Gemini...</p>';
 
-            let prompt = "Onde assistir ao vivo o jogo do " + time + " hoje no Brasil? Liste apenas canais de TV, streaming ou YouTube. Seja muito curto e direto.";
+            let prompt = "Onde assistir ao vivo o jogo do " + time + " hoje ou nas próximas horas no Brasil? Liste resumidamente apenas os canais oficiais (TV aberta, fechada, streaming ou canais do YouTube).";
 
             try {
-                let r = await fetch("https://googleapis.com" + chave, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        contents: [{ parts: [{ text: prompt }] }],
-                        tools: [{ googleSearch: {} }]
-                    })
+                // Inicializa o cliente do Gemini usando o padrão oficial do Google para navegadores web
+                const ai = new GoogleGenAI({ apiKey: chave });
+                const response = await ai.models.generateContent({
+                    model: 'gemini-1.5-flash',
+                    contents: prompt,
+                    // Ativa a ferramenta de busca ao vivo do Google de forma nativa pela biblioteca
+                    tools: [{ googleSearch: {} }] 
                 });
-                let d = await r.json();
-                let txt = d.candidates[0].content.parts[0].text;
-                campo.innerHTML = `<div class="resultado"><b>Canais encontrados:</b><br>${txt.replace(/\n/g, '<br>')}</div>`;
+                
+                let txt = response.text;
+                if (txt) {
+                    txt = txt.replace(/\*\*/g, '').replace(/\*/g, '•');
+                    campo.innerHTML = `<div class="resultado"><b>Canais encontrados pela IA:</b><br>${txt.replace(/\n/g, '<br>')}</div>`;
+                } else {
+                    campo.innerHTML = '<div class="resultado">Nenhuma informação clara encontrada no momento.</div>';
+                }
             } catch (e) {
-                campo.innerHTML = '<p style="color:red; font-size:12px;">Erro ao buscar. Verifique a chave ou sua conexão.</p>';
+                console.error(e);
+                campo.innerHTML = '<p style="color:red; font-size:12px;">Erro ao processar. Certifique-se de que salvou uma Chave API válida.</p>';
             }
         }
     </script>
