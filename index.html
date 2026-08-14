@@ -173,7 +173,7 @@
                 // Inicializa o cliente do Gemini usando o padrão oficial do Google para navegadores web
                 const ai = new GoogleGenAI({ apiKey: chave });
                 const response = await ai.models.generateContent({
-                    model: 'gemini-1.5-flash',
+                    model: 'gemini-2.5-flash',
                     contents: prompt,
                     // Ativa a ferramenta de busca ao vivo do Google de forma nativa pela biblioteca
                     tools: [{ googleSearch: {} }] 
