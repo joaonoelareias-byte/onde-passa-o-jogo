@@ -189,26 +189,36 @@
             let nomeOficial = candidato.team.name;
             let pais = candidato.team.country;
 
-            // Etapa 2: busca fixtures num intervalo de datas (o parâmetro "next" é bloqueado
-            // no plano gratuito da API-Football, então usamos from/to e pegamos o mais próximo)
+            // Etapa 2: busca fixtures num intervalo de datas. A API exige o parâmetro "season"
+            // quando from/to são usados com team. Como não sabemos se a liga do time segue o
+            // calendário europeu (ex: 2026/27) ou o civil (ex: Brasil, season = próprio ano),
+            // buscamos o ano atual e o seguinte em paralelo e juntamos os resultados.
             let hoje = new Date();
             let limite = new Date();
-            limite.setDate(limite.getDate() + 180); // cobre folgas longas de temporada (amistosos, pré-temporada etc.)
+            limite.setDate(limite.getDate() + 180); // cobre folgas longas de temporada
             let fmt = d => d.toISOString().slice(0, 10);
+            let anoAtual = hoje.getFullYear();
 
-            let respFixture = await fetch(
-                'https://v3.football.api-sports.io/fixtures?team=' + timeId +
-                '&from=' + fmt(hoje) + '&to=' + fmt(limite),
-                { headers: { 'x-apisports-key': chaveFootball } }
-            );
-            let dadosFixture = await respFixture.json();
+            let urlBase = 'https://v3.football.api-sports.io/fixtures?team=' + timeId +
+                '&from=' + fmt(hoje) + '&to=' + fmt(limite) + '&season=';
 
-            if (!dadosFixture.response || dadosFixture.response.length === 0) {
+            let [respAtual, respProximo] = await Promise.all([
+                fetch(urlBase + anoAtual, { headers: { 'x-apisports-key': chaveFootball } }),
+                fetch(urlBase + (anoAtual + 1), { headers: { 'x-apisports-key': chaveFootball } })
+            ]);
+            let [dadosAtual, dadosProximo] = await Promise.all([respAtual.json(), respProximo.json()]);
+
+            let todosJogos = [
+                ...(dadosAtual.response || []),
+                ...(dadosProximo.response || [])
+            ];
+
+            if (todosJogos.length === 0) {
                 throw new Error('Nenhum jogo agendado nos próximos 180 dias para este time.');
             }
 
             // Ordena por data e pega o primeiro (o mais próximo a partir de agora)
-            let proximos = dadosFixture.response
+            let proximos = todosJogos
                 .slice()
                 .sort((a, b) => new Date(a.fixture.date) - new Date(b.fixture.date));
             let jogo = proximos[0];
