@@ -127,14 +127,23 @@
                 return null;
             }
 
-            let quandoTexto = quando === 'hoje' ? 'hoje'
-                : quando === 'amanha' ? 'amanhã'
+            let hoje = new Date();
+            let amanha = new Date();
+            amanha.setDate(amanha.getDate() + 1);
+            let fmtLongo = d => d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
+            let hojeFmt = fmtLongo(hoje);
+            let amanhaFmt = fmtLongo(amanha);
+
+            let quandoTexto = quando === 'hoje' ? ('hoje, ' + hojeFmt)
+                : quando === 'amanha' ? ('amanhã, ' + amanhaFmt)
                 : (dataCustom || 'na data que eu informar');
 
+            let prefixoData = 'Hoje é ' + hojeFmt + '. ';
+
             if (adversario) {
-                return 'Onde vai passar o jogo de futebol ' + meuTime + ' x ' + adversario + ', ' + quandoTexto + '? Liste todos os canais oficiais de transmissão no Brasil (TV aberta, TV fechada, streaming e canais do YouTube, incluindo canais menos conhecidos). Para cada canal, cite de qual site você tirou essa informação. Se não tiver certeza da transmissão, diga isso claramente em vez de arriscar uma resposta.';
+                return prefixoData + 'Onde vai passar o jogo de futebol ' + meuTime + ' x ' + adversario + ', ' + quandoTexto + '? Liste todos os canais oficiais de transmissão no Brasil (TV aberta, TV fechada, streaming e canais do YouTube, incluindo canais menos conhecidos). Para cada canal, cite de qual site você tirou essa informação. Se não tiver certeza da transmissão, diga isso claramente em vez de arriscar uma resposta.';
             }
-            return 'Onde vai passar o jogo de futebol do ' + meuTime + ' ' + quandoTexto + '? Liste todos os canais oficiais de transmissão no Brasil (TV aberta, TV fechada, streaming e canais do YouTube, incluindo canais menos conhecidos). Para cada canal, cite de qual site você tirou essa informação. Se não tiver certeza de qual é o jogo ou da transmissão, diga isso claramente em vez de arriscar uma resposta.';
+            return prefixoData + 'Onde vai passar o jogo de futebol do ' + meuTime + ' ' + quandoTexto + '? Liste todos os canais oficiais de transmissão no Brasil (TV aberta, TV fechada, streaming e canais do YouTube, incluindo canais menos conhecidos). Para cada canal, cite de qual site você tirou essa informação. Se não tiver certeza de qual é o jogo ou da transmissão, diga isso claramente em vez de arriscar uma resposta.';
         }
 
         window.perguntarIA = async function() {
