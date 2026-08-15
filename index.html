@@ -171,7 +171,16 @@
                 });
 
                 let txt = response.text;
-                textoGerado.textContent = txt ? txt.replace(/\*\*/g, '').replace(/\*/g, '•') : 'Nenhuma informação encontrada.';
+                let resultado = txt ? txt.replace(/\*\*/g, '').replace(/\*/g, '•') : 'Nenhuma informação encontrada.';
+
+                let metadata = response.candidates?.[0]?.groundingMetadata;
+                let diag;
+                if (metadata && metadata.webSearchQueries && metadata.webSearchQueries.length > 0) {
+                    diag = '\n\n[Busca ativada. Consultas feitas: ' + metadata.webSearchQueries.join(' | ') + ']';
+                } else {
+                    diag = '\n\n[AVISO: busca ao vivo NÃO foi ativada nesta resposta — respondeu de memória.]';
+                }
+                textoGerado.textContent = resultado + diag;
             } catch (e) {
                 console.error(e);
                 textoGerado.textContent = 'Erro ao processar. Certifique-se de que salvou uma Chave API do Gemini válida.';
