@@ -132,9 +132,9 @@
                 : (dataCustom || 'na data que eu informar');
 
             if (adversario) {
-                return 'Onde vai passar o jogo de futebol ' + meuTime + ' x ' + adversario + ', ' + quandoTexto + '? Liste todos os canais oficiais de transmissão no Brasil (TV aberta, TV fechada, streaming e canais do YouTube, incluindo canais menos conhecidos). Se não tiver certeza da transmissão, diga isso claramente em vez de arriscar uma resposta.';
+                return 'Onde vai passar o jogo de futebol ' + meuTime + ' x ' + adversario + ', ' + quandoTexto + '? Liste todos os canais oficiais de transmissão no Brasil (TV aberta, TV fechada, streaming e canais do YouTube, incluindo canais menos conhecidos). Para cada canal, cite de qual site você tirou essa informação. Se não tiver certeza da transmissão, diga isso claramente em vez de arriscar uma resposta.';
             }
-            return 'Onde vai passar o jogo de futebol do ' + meuTime + ' ' + quandoTexto + '? Liste todos os canais oficiais de transmissão no Brasil (TV aberta, TV fechada, streaming e canais do YouTube, incluindo canais menos conhecidos). Se não tiver certeza de qual é o jogo ou da transmissão, diga isso claramente em vez de arriscar uma resposta.';
+            return 'Onde vai passar o jogo de futebol do ' + meuTime + ' ' + quandoTexto + '? Liste todos os canais oficiais de transmissão no Brasil (TV aberta, TV fechada, streaming e canais do YouTube, incluindo canais menos conhecidos). Para cada canal, cite de qual site você tirou essa informação. Se não tiver certeza de qual é o jogo ou da transmissão, diga isso claramente em vez de arriscar uma resposta.';
         }
 
         window.perguntarIA = async function() {
@@ -154,7 +154,7 @@
             try {
                 const ai = new GoogleGenAI({ apiKey: chave });
                 const response = await ai.models.generateContent({
-                    model: 'gemini-3.1-flash-lite',
+                    model: 'gemini-3.5-flash',
                     contents: pergunta,
                     tools: [{ googleSearch: {} }]
                 });
